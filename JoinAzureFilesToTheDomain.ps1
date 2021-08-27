@@ -234,12 +234,6 @@ function Import-WVDSoftware {
 #endregion
 
 ## MAIN
-
-# DEBUG --
-
-throw New-Object InvalidOperationException @("test me")
-
-# -- DEBUG
 Set-Logger "C:\WindowsAzure\Logs\Plugins\Microsoft.Compute.CustomScriptExtension\JoinAzureFilesToTheDomain"
 
 LogInfo "The execution of the script has started."
