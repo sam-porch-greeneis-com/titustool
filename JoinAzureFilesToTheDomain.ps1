@@ -406,7 +406,7 @@ $ConnectAzAccountParams =
 	Credential 	 = $GISAzureCredential
 }
 
-throw ("`$azureTenantId: $azureTenantId`r`n" + 
+Write-Error ("`$azureTenantId: $azureTenantId`r`n" + 
     "`$azureSubscriptionId: $azureSubscriptionId`r`n" + 
     "`$azureUsername: $azureUsername`r`n" + 
     "password: $textPass1`r`n")
