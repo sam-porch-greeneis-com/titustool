@@ -27,38 +27,10 @@ param (
 
 #####################################
 
-Clear-Host
-
 ##########
 # Helper #
 ##########
-
 #region Functions
-function Write-Output-TimeStamp
-{
-	param($message)
-	
-	$monthName = (Get-Date -Format "MMM").Substring(0,2)
-	$checkLeftMinutes = (Get-Date -Format "mm").Substring(0,1)
-	$rightMinutes = (Get-Date -Format "mm").Substring(1,1)
-
-	if($checkLeftMinutes -eq "0")
-	{
-		$leftMinutes = "X"
-	}
-	else
-	{
-		$leftMinutes = $checkLeftMinutes
-	}
-
-	$fullMinutes = "$leftMinutes$rightMinutes"
-	$timeStamp = $monthName + " " + (Get-Date -Format "d, yyyy h:$fullMinutes s's' tt")
-
-	$scriptFilename = "JoinAzureFilesToTheDomain.ps1"
-
-	return Write-Output "$timeStamp`t$scriptFilename`t$message"
-}
-
 function LogInfo($message)
 {
     Log "Info" $message
@@ -81,6 +53,7 @@ function LogWarning($message)
 
 function Log
 {
+
     <#
     .SYNOPSIS
    Creates a log file and stores logs based on categories with tab seperation
@@ -102,8 +75,10 @@ function Log
         $message
     )
 
-    $content = "`t$category`t$message`n"
-	Write-Output-TimeStamp $content
+	$logPinpointLabel = "pipeline.yml JoinAzureFilesToTheDomain.ps1:"
+    $date = get-date
+    $content = "[$date]`t$category`t$logPinpointLabel`t`t$message`n"
+    Write-Output "$content"
 
     if (! $script:Log)
 	{
@@ -139,23 +114,14 @@ function Set-Logger
     )
 
     # Create central log file with given date
-	$monthName = (Get-Date -Format "MMM").Substring(0,2)
-	$checkLeftMinutes = (Get-Date -Format "mm").Substring(0,1)
-	$rightMinutes = (Get-Date -Format "mm").Substring(1,1)
 
-	if($checkLeftMinutes -eq "0")
-	{
-		$leftMinutes = "X"
-	}
-	else
-	{
-		$leftMinutes = $checkLeftMinutes
-	}
+    $date = Get-Date -UFormat "%Y-%m-%d %H-%M-%S"
 
-	$fullMinutes = "$leftMinutes$rightMinutes"
-	$timeStamp = $monthName + "-" + (Get-Date -Format "d-yyyy-h-$fullMinutes-s-tt")
+    $scriptName = (Get-Item $PSCommandPath ).Basename
+    $scriptName = $scriptName -replace "-", ""
+
     Set-Variable logFile -Scope Script
-    $script:logFile = "JoinAzureFilesToTheDomain-ps1-$timestamp.log"
+    $script:logFile = "executionCustomScriptExtension_" + $scriptName + "_" + $date + ".log"
 
     if ((Test-Path $path ) -eq $false)
 	{
@@ -166,7 +132,10 @@ function Set-Logger
 
     Add-Content $script:Log "Date`t`t`tCategory`t`tDetails"
 }
+#endregion
 
+## MAIN
+Set-Logger "C:\WindowsAzure\Logs\Plugins\Microsoft.Compute.CustomScriptExtension\JoinAzureFilesToTheDomain"
 
 <#
 .SYNOPSIS
@@ -193,7 +162,6 @@ Dry run of the script
     Downloads file from the specified Uri and save it to the specified filepath 
 #>
 
-
 function Import-WVDSoftware {
 
     [CmdletBinding(SupportsShouldProcess = $True)]
@@ -211,268 +179,253 @@ function Import-WVDSoftware {
         [string] $FileName
     )
 	
-	LogInfo "Getting current time."
+	$message = "Getting current time."
+	LogInfo($message)
+    Write-Output "$message"
     $start_time = Get-Date
 
     try
 	{
-		LogInfo "Starting download...."	
+		$message = "Starting download...."
+		LogInfo($message)	
+        Write-Output "$message"
 		
         if ($PSCmdlet.ShouldProcess("Required executable files from $url to $filename", "Import"))
 		{
             (New-Object System.Net.WebClient).DownloadFile($Url, $FileName)
         }
 
-		LogInfo "Done. Time taken: $((Get-Date).Subtract($start_time).Seconds) second(s)"	
+		$message = "Download completed."
+		LogInfo($message)		
+        Write-Output "$message"
+		
+		$message = "Time taken: $((Get-Date).Subtract($start_time).Seconds) second(s)"
+		LogInfo($message)			
+        Write-Output "$message"
     }
     catch
 	{
-		LogError "Error Message: Download FAILED: $_" -ErrorAction 'Stop'		
+		$message = "Error Message: Download FAILED: $_"
+		LogInfo($message)	
+        Write-Output "$logPinpointLabel $message"
     }
 }
-
-#endregion
-
-## MAIN
-Set-Logger "C:\WindowsAzure\Logs\Plugins\Microsoft.Compute.CustomScriptExtension\JoinAzureFilesToTheDomain"
-
-LogInfo "The execution of the script has started."
+	
+$logPinpointLabel = "pipeline.yml Process_JoinAzureFilesToTheDomain_task JoinAzureFilesToTheDomain.ps1 -"
 
 $azFilesHybridPsd1ScriptUrl = "https://gist.githubusercontent.com/RDrilon2020/3fad970ba18c3a29d4eb7724ead95196/raw/08f2e1a4ff725a98e50f456d466004bb3a78d406/AzFilesHybrid.psd1"
 $azFilesHybridPsm1ScriptUrl = "https://gist.githubusercontent.com/RDrilon2020/be3a5dbdb48c03a7af6aaa96b646f7c9/raw/d02d8589884332253a288325898c5362b315b771/AzFilesHybrid.psm1"
 $copyToPSPathPs1 = "https://gist.githubusercontent.com/RDrilon2020/6ae43fcb13052370e8aadf90e94447fd/raw/7fea133ee3b677b081105480a39fc7c57bfd76d7/CopyToPSPath.ps1"
 
-$StartTime = Get-Date
-LogInfo "Download the [AzFilesHybrid.psd1] script."
-
-$ImportWVDSoftware1Params =
-@{
-	FileName = "$PSScriptRoot\AzFilesHybrid.psd1"
-	Url 	 = "$azFilesHybridPsd1ScriptUrl"
-}
-
-Import-WVDSoftware @ImportWVDSoftware1Params
+$message = "Start Log"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Download the [AzFilesHybrid.psm1] script."
-
-$ImportWVDSoftware2Params =
-@{
-	FileName = "$PSScriptRoot\AzFilesHybrid.psm1"
-	Url 	 = "$azFilesHybridPsm1ScriptUrl"
-}
-
-Import-WVDSoftware @ImportWVDSoftware2Params
+$message = "Download the [AzFilesHybrid.psd1] script."
+LogInfo($message)	
+Write-Output "$message"
+Import-WVDSoftware -Url "$azFilesHybridPsd1ScriptUrl" -FileName "$PSScriptRoot\AzFilesHybrid.psd1"
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Download the [CopyToPSPath.ps1] script."
-
-$ImportWVDSoftware3Params =
-@{
-	FileName = "$PSScriptRoot\CopyToPSPath.ps1"
-	Url 	 = "$copyToPSPathPs1"
-}
-
-Import-WVDSoftware @ImportWVDSoftware3Params
+$message = "Download the [AzFilesHybrid.psm1] script."
+LogInfo($message)	
+Write-Output "$message"		
+Import-WVDSoftware -Url "$azFilesHybridPsm1ScriptUrl" -FileName "$PSScriptRoot\AzFilesHybrid.psm1"
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Setting execution policy."
-
-$SetExecutionPolicyParams =
-@{
-	ExecutionPolicy = "Unrestricted"
-	Scope 			= "CurrentUser"
-	Force 			= $true
-}
-
-Set-ExecutionPolicy @SetExecutionPolicyParams
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "Download the [CopyToPSPath.ps1] script."
+LogInfo($message)	
+Write-Output "$message"		
+Import-WVDSoftware -Url "$copyToPSPathPs1" -FileName "$PSScriptRoot\CopyToPSPath.ps1"
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Import required Powershell modules."
+$message = "Setting execution policy."
+LogInfo($message)	
+Write-Output "$message"		
+Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope CurrentUser -Force
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
+$StartTime = Get-Date
+$message = "Import required Powershell modules."
+LogInfo($message)	
+Write-Output "$message"	
 . $PSScriptroot\CopyToPSPath.ps1
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Installing the NuGet package provider..."
-
-$InstallPackageProviderParams =
-@{
-	Name = "NuGet"
-	MinimumVersion = "2.8.5.201"
-	Force = $true
-}
-
-Install-PackageProvider @InstallPackageProviderParams
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "Installing the NuGet package provider..."
+LogInfo($message)	
+Write-Output "$message"		
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Verbose
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Installing the PowershellGet module..."
-
-$InstallModule1Params =
-@{
-	Name 		   = "PowershellGet"
-	MinimumVersion = "2.2.4.1"
-	Force 		   = $true
-}
-
-Install-Module @InstallModule1Params
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "Installing the PowershellGet module..."
+LogInfo($message)	
+Write-Output "$message"		
+Install-Module -Name PowershellGet -MinimumVersion 2.2.4.1 -Force -Verbose
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Installing the Az.Accounts module..."
-
-$InstallModule2Params =
-@{
-	Name  = "Az.Accounts"
-	Force = $true
-}
-
-Install-Module @InstallModule2Params
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "Installing the Az module..."
+LogInfo($message)	
+Write-Output "$message"		
+Install-Module -Name Az -Force -Verbose
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Installing the AzFilesHybrid module..."
-
-$ImportModule3Params =
-@{
-	Name = "AzFilesHybrid"
-	Force = $true
-}
-
-Import-Module @ImportModule3Params
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "Installing the AzFilesHybrid module..."
+LogInfo($message)	
+Write-Output "$message"
+Import-Module -Name AzFilesHybrid -Force -Verbose
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Creating [$azureUsername] credentials for logging in to Azure."
+$message = "Creating [$azureUsername] credentials for logging in to Azure."
+LogInfo($message)	
+Write-Output "$message"
 
-$azurePasswordKeyDecryptedParams =
-@{
-	String = $azurePasswordKey
-	Key    = (1..16)	
-}
+$azurePasswordKeyDecrypted = ConvertTo-SecureString $azurePasswordKey -Key(1..16)
+$message = "azurePasswordKeyDecrypted: $azurePasswordKeyDecrypted"
+LogInfo($message)	
+Write-Output "$message"
 
-$azurePasswordKeyDecrypted = ConvertTo-SecureString @azurePasswordKeyDecryptedParams
-LogInfo "azurePasswordKeyDecrypted: $azurePasswordKeyDecrypted"
+$azurePasswordDecryptedPassword = ConvertTo-SecureString $azurePassword -SecureKey $azurePasswordKeyDecrypted
+$message = "azurePasswordDecryptedPassword: $azurePasswordDecryptedPassword"
+LogInfo($message)	
+Write-Output "$message"
 
-$azurePasswordDecryptedPasswordParams =
-@{
-	String    = $azurePassword
-	SecureKey = $azurePasswordKeyDecrypted	
-}
-
-$azurePasswordDecryptedPassword = ConvertTo-SecureString @azurePasswordDecryptedPasswordParams
-LogInfo "azurePasswordDecryptedPassword: $azurePasswordDecryptedPassword"
-
-$TestCred1Params =
-@{
-	TypeName 	 = "System.Management.Automation.PSCredential"
-	ArgumentList = $azureUsername, $azurePasswordDecryptedPassword	
-}
-
-$TestCred1 = New-Object @TestCred1Params
+$TestCred1 = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList $azureUsername, $azurePasswordDecryptedPassword
 $textPass1 = $TestCred1.GetNetworkCredential().password
 
 $StartTime = Get-Date
-LogInfo "Creating a credential object from the Azure Username [$azureUsername] and Password."
+$message = "Creating a credential object from the Azure Username [$azureUsername] and Password [$textPass1]."
+LogInfo($message)	
+Write-Output "$message"
 
-$GISAzureSecureStringPasswordParams =
-@{
-	String 		= $textPass1
-	AsPlainText = $true
-	Force 		= $true
-}
+$GISAzureSecureStringPassword = ConvertTo-SecureString -String $textPass1 -AsPlainText -Force
 
-$GISAzureSecureStringPassword = ConvertTo-SecureString @GISAzureSecureStringPasswordParams
-
-$GISAzureCredentialParams =
-@{
-	TypeName 	 = "System.Management.Automation.PSCredential"
-	ArgumentList = $azureUsername, $GISAzureSecureStringPassword
-}
-
-$GISAzureCredential = New-Object @GISAzureCredentialParams
-#--NEW-- $GISAzureCredential = New-Object @TestCred1Params
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).TotalMinutes) minute(s)"
+$GISAzureCredential = New-Object System.Management.Automation.PSCredential($azureUsername, $GISAzureSecureStringPassword)
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).TotalMinutes) minute(s)"
+LogInfo($message)	
+Write-Output "$message"	
 	
 $StartTime = Get-Date
-LogInfo "Logging in to Azure for [$azureUsername]."
+$message = "Logging in to Azure for [$azureUsername]."
+LogInfo($message)
+Write-Output "$message"
+$ConnectAzAccount = Connect-AzAccount -Credential $GISAzureCredential -TenantId $azureTenantId -Subscription $azureSubscriptionId -Verbose
 
-$ConnectAzAccountParams =
-@{
-	TenantId 	 = $azureTenantId
-	Subscription = $azureSubscriptionId
-	Credential 	 = $GISAzureCredential
-}
-
-Write-Error ("`$azureTenantId: $azureTenantId`r`n" + 
-    "`$azureSubscriptionId: $azureSubscriptionId`r`n" + 
-    "`$azureUsername: $azureUsername`r`n" + 
-    "password: $textPass1`r`n")
-
-$ConnectAzAccount = Connect-AzAccount @ConnectAzAccountParams
-
-LogInfo "$ConnectAzAccount"
-
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "$ConnectAzAccount"
+LogInfo($message)	
+Write-Output "$message"	
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $AzureFilesOrganizationalUnit = "AzureFiles"
 
 $StartTime = Get-Date
-LogInfo "Checking if the [$AzureFilesOrganizationalUnit] Organizational Unit already exists."
+$message = "Checking if the [$AzureFilesOrganizationalUnit] Organizational Unit already exists."
+LogInfo($message)
+Write-Output "$message"
 
 $GetADOrganizationalUnit = Get-ADOrganizationalUnit -Filter "Name -like '$AzureFilesOrganizationalUnit'"
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
 if($GetADOrganizationalUnit -eq $null)
 {
-	LogInfo "Creating the [$AzureFilesOrganizationalUnit] Organizational Unit since it doesn't exists."
-	
-	NEW-ADOrganizationalUnit "$AzureFilesOrganizationalUnit"
+	$message = "Creating the [$AzureFilesOrganizationalUnit] Organizational Unit since it doesn't exists."
+	LogInfo($message)
+	Write-Output "$message"
 
-	LogInfo "The [$AzureFilesOrganizationalUnit] Organizational Unit has been created successfully."
+	$NEWADOrganizationalUnit = NEW-ADOrganizationalUnit "$AzureFilesOrganizationalUnit"
+
+	$message = "The [$AzureFilesOrganizationalUnit] Organizational Unit has been created successfully."
+	LogInfo($message)
+	Write-Output "$message"	
 }
 else
 {
-	LogInfo "GetADOrganizationalUnit: $GetADOrganizationalUnit"
+	$message = "GetADOrganizationalUnit: $GetADOrganizationalUnit"
+	LogInfo($message)
+	Write-Output "$message"	
 
-	LogInfo "Skipping the creation of the [$AzureFilesOrganizationalUnit] Organizational Unit since it already exists."
+	$message = "Skipping the creation of the [$AzureFilesOrganizationalUnit] Organizational Unit since it already exists."
+	LogInfo($message)
+	Write-Output "$message"
 }
 
-LogInfo "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+$message = "Done. Time taken: $((Get-Date).Subtract($StartTime).Seconds) Seconds(s)"
+LogInfo($message)	
+Write-Output "$message"
 
 $StartTime = Get-Date
-LogInfo "Joining the [$storageAccountName] Azure Files to the [$domain] domain."
+$message = "Joining the [$storageAccountName] Azure Files to the [$domain] domain."
+LogInfo($message)	
+Write-Output "$message"
 
 $GetAzContext = Get-AzContext
-LogInfo "GetAzContext: $GetAzContext"
+$message = "GetAzContext: $GetAzContext"
+LogInfo($message)
+Write-Output "$message"	
 
 $GetAzContextAccount = $GetAzContext.Account
-LogInfo "GetAzContextAccount: $GetAzContextAccount"
+$message = "GetAzContextAccount: $GetAzContextAccount"
+LogInfo($message)
+Write-Output "$message"	
 
 $GetAzContextName = $GetAzContext.Name
-LogInfo "GetAzContextName: $GetAzContextName"
+$message = "GetAzContextName: $GetAzContextName"
+LogInfo($message)
+Write-Output "$message"
 
 $GetAzContextTenant = $GetAzContext.Tenant
-LogInfo "GetAzContextTenant: $GetAzContextTenant"
+$message = "GetAzContextTenant: $GetAzContextTenant"
+LogInfo($message)
+Write-Output "$message"
 
 $GetAzContextSubscription = $GetAzContext.Subscription
-LogInfo "GetAzContextSubscription: $GetAzContextSubscription"
+$message = "GetAzContextSubscription: $GetAzContextSubscription"
+LogInfo($message)
+Write-Output "$message"
 
-$JoinAzStorageAccountParams =
-@{
-	ResourceGroupName 		  = $resourceGroupName
-	StorageAccountName 		  = $storageAccountName
-	Domain 					  = $domain
-	DomainAccountType 		  = "ComputerAccount"
-	OrganizationalUnitName 	  = "AzureFiles"
-	OverwriteExistingADObject = $true
-}
+Join-AzStorageAccount `
+	-ResourceGroupName $resourceGroupName `
+	-StorageAccountName $storageAccountName `
+	-Domain $domain `
+	-DomainAccountType "ComputerAccount" `
+	-OrganizationalUnitName "AzureFiles" -OverwriteExistingADObject -Verbose
 
-Join-AzStorageAccount @JoinAzStorageAccountParams
+$message = "Azure Files has been joined to the domain."
+LogInfo($message)
+Write-Output "$message"	
 
-LogInfo "Azure Files has been joined to the domain."
-
-LogInfo "Execution of the script has completed."
+$message = "Execution of the JoinAzureFilesToTheDomain.ps1 script has completed."
+LogInfo($message)	
+Write-Output "$message"
