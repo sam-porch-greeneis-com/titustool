@@ -331,7 +331,9 @@ $GISAzureCredential = New-Object System.Management.Automation.PSCredential($azur
 $message = "Done. Time taken: $((Get-Date).Subtract($StartTime).TotalMinutes) minute(s)"
 LogInfo($message)	
 Write-Output "$message"	
-	
+
+LogInfo("Using Tenant ID: [$azureTenantId] and Subscription: [$azureSubscriptionId]")
+
 $StartTime = Get-Date
 $message = "Logging in to Azure for [$azureUsername]."
 LogInfo($message)
